@@ -172,7 +172,7 @@ export async function generateDeclarationReport(data: DeclarationReportData): Pr
       content.push({
         columns: [
           { text: 'SWA Certified:', bold: true, fontSize: 9, width: 'auto' },
-          { text: data.swaPercent > 0 ? 'Yes' : 'No', fontSize: 9, color: data.swaPercent > 0 ? COLORS.green : COLORS.red, bold: true, width: 'auto', margin: [6, 0, 20, 0] },
+          { text: data.swaPercent >= 85 ? 'Yes' : 'No', fontSize: 9, color: data.swaPercent >= 85 ? COLORS.green : COLORS.red, bold: true, width: 'auto', margin: [6, 0, 20, 0] },
           { text: `${fmtPct(data.swaPercent, decimals)} sourced from SWA-certified vineyards`, fontSize: 9, color: COLORS.medium },
         ],
         margin: [0, 2, 0, 4],

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Wine, LogOut } from 'lucide-react';
+import { Wine } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useReferenceData } from '../context/ReferenceDataContext';
 import type { ComponentsSummary, Additive, Analysis, Lot, BlockComponent, Bond, LotMakeup } from '../api/innovint';
@@ -35,7 +35,7 @@ type LoadState<T> =
   | { status: 'error'; message: string; endpoint?: string };
 
 export function Dashboard() {
-  const { token, setToken } = useAuth();
+  const { token } = useAuth();
   const { loading: refLoading, error: refError, reload: refReload } = useReferenceData();
 
   const [lotId, setLotId] = useState<string | null>(null);
@@ -155,30 +155,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-amber-600 p-1.5 rounded-lg">
-              <Wine className="text-white" size={18} />
-            </div>
-            <div>
-              <span className="font-semibold text-slate-900 text-sm">AVL Wines</span>
-              <span className="text-slate-400 text-sm mx-2">|</span>
-              <span className="text-slate-600 text-sm">LIP Dashboard</span>
-            </div>
-          </div>
-          <button
-            onClick={() => setToken(null)}
-            className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition-colors"
-          >
-            <LogOut size={15} />
-            Change Token
-          </button>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         {refLoading && (
           <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 text-sm text-amber-700">
             <div className="w-3 h-3 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
@@ -344,9 +321,7 @@ export function Dashboard() {
             <p className="text-sm">Select a lot above to load data.</p>
           </div>
         )}
-      </main>
-
       {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
-    </div>
+    </main>
   );
 }
