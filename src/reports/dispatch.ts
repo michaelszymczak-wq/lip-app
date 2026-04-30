@@ -8,6 +8,7 @@ import {
   buildAnalysesTable, buildAdditivesTable, buildVeganStatus,
   buildAppellationSummary, buildDetailedAppellationTable,
   toLitres,
+  type Content,
 } from './pdfHelpers';
 
 export type { DispatchReportData };
@@ -167,17 +168,19 @@ export async function generateDispatchReport(data: DispatchReportData): Promise<
     content.push({ table: { headerRows: 1, widths: ['*', 70, 90], body: tableBody }, layout: 'lightHorizontalLines', margin: [0, 0, 0, 8] });
   }
 
-  // ── Section 6: Highest Appellation ───────────────────────────────────────
+  // ── Sections 6+7: Appellation (grouped to avoid mid-section page breaks) ──
 
-  content.push(...sectionHeading('6 — Highest Appellation'));
-  content.push(data.appellations.length > 0
-    ? buildAppellationSummary(data.appellations, data.appellationMap, decimals)
-    : { text: 'No appellation data.', fontSize: 9, color: COLORS.light, italics: true, margin: [0, 2, 0, 8] });
-
-  // ── Section 7: Detailed Appellation Hierarchy (with validation column) ────
-
-  content.push(...sectionHeading('7 — Detailed Appellation Hierarchy'));
-  content.push(buildDetailedAppellationTable(data.appellations, data.appellationMap, data.totalLitres, true, decimals));
+  {
+    const appStack: Content[] = [
+      ...sectionHeading('6 — Highest Appellation'),
+      data.appellations.length > 0
+        ? buildAppellationSummary(data.appellations, data.appellationMap, decimals)
+        : { text: 'No appellation data.', fontSize: 9, color: COLORS.light, italics: true, margin: [0, 2, 0, 8] },
+      ...sectionHeading('7 — Detailed Appellation Hierarchy'),
+      buildDetailedAppellationTable(data.appellations, data.appellationMap, data.totalLitres, true, decimals),
+    ];
+    content.push({ stack: appStack, unbreakable: true });
+  }
 
   // ── Section 8: Culture & Sweetener ───────────────────────────────────────
 
@@ -270,6 +273,6 @@ export async function generateDispatchReport(data: DispatchReportData): Promise<
     header: pageHeader('AVL Wines', 'Dispatch Approval Report', generated, data.lotNumber),
     footer: pageFooter('AVL Wines — Dispatch Approval | CONFIDENTIAL'),
     content,
-    defaultStyle: { font: 'Roboto', fontSize: 9, color: COLORS.dark, lineHeight: 1.3 },
+    defaultStyle: { font: 'Roboto', fontSize: 9, color: COLORS.dark, lineHeight: 1.2 },
   }).download(`LIP_Dispatch_${data.lotNumber}.pdf`);
 }

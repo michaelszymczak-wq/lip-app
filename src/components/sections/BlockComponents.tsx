@@ -1,11 +1,9 @@
-import { useEffect, useState } from 'react';
 import type { BlockComponent } from '../../api/innovint';
-import { fetchBlock } from '../../api/innovint';
-import { useAuth } from '../../context/AuthContext';
 import { fmtPct, fmtVintage } from '../../utils/format';
 
 interface Props {
   data: BlockComponent[];
+  blockTags: Record<string, string[]>;
 }
 
 function toPct(pct: number | undefined): number {
@@ -13,27 +11,7 @@ function toPct(pct: number | undefined): number {
   return pct > 1 ? pct : pct * 100;
 }
 
-export function BlockComponents({ data }: Props) {
-  const { token } = useAuth();
-  const [blockTags, setBlockTags] = useState<Record<string, string[]>>({});
-
-  useEffect(() => {
-    if (!token || data.length === 0) return;
-    const uniqueIds = [...new Set(
-      data.map((r) => r.block?.id).filter((id): id is string => !!id)
-    )];
-    Promise.all(
-      uniqueIds.map((id) =>
-        fetchBlock(token, id)
-          .then((b) => ({ id, tags: b.tags ?? [] }))
-          .catch(() => ({ id, tags: [] }))
-      )
-    ).then((results) => {
-      const map: Record<string, string[]> = {};
-      results.forEach(({ id, tags }) => { map[id] = tags; });
-      setBlockTags(map);
-    });
-  }, [token, data]);
+export function BlockComponents({ data, blockTags }: Props) {
 
   if (data.length === 0) {
     return <p className="text-sm text-slate-400 italic">No block components recorded.</p>;

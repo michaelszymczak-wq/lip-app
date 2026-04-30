@@ -4,9 +4,10 @@ import {
   nowStr, todayStr, fmtPct, fmtL,
   sectionHeading, kvRow, tableHeader, dataCell,
   pageHeader, pageFooter, COLORS,
-  buildVarietalTable, buildVintageTable,
+  buildVarietalVintageColumns,
   buildAppellationSummary, buildDetailedAppellationTable,
   buildAnalysesTable, buildAdditivesTable, buildVeganStatus,
+  type Content,
 } from './pdfHelpers';
 
 export type { DeclarationReportData };
@@ -77,8 +78,7 @@ export async function generateDeclarationReport(data: DeclarationReportData): Pr
       table: {
         widths: [120, '*'],
         body: [
-          kvRow('Current Vessel', data.vesselName, 0),
-          kvRow('Declared Volume', fmtL(data.totalLitres), 1),
+          kvRow('Declared Volume', fmtL(data.totalLitres), 0),
         ],
       },
       layout: 'lightHorizontalLines',
@@ -114,25 +114,30 @@ export async function generateDeclarationReport(data: DeclarationReportData): Pr
       margin: [0, 0, 0, 8],
     },
 
-    ...sectionHeading('Varietal Breakdown'),
-    buildVarietalTable(data.varietals, data.varietalMap, data.totalLitres, decimals),
-
-    ...sectionHeading('Vintage Breakdown'),
-    buildVintageTable(data.vintages, data.totalLitres, decimals),
   ];
 
-  // ── Highest Appellation ──────────────────────────────────────────────────
+  // Varietal + Vintage side-by-side
+  content.push({
+    stack: [
+      ...sectionHeading('Varietal & Vintage Breakdown'),
+      buildVarietalVintageColumns(data.varietals, data.vintages, data.varietalMap, data.totalLitres, decimals),
+    ],
+    unbreakable: true,
+  });
 
-  if (params.showAppellation && data.appellations.length > 0) {
-    content.push(...sectionHeading('Highest Appellation'));
-    content.push(buildAppellationSummary(data.appellations, data.appellationMap, decimals));
-  }
+  // ── Appellation (grouped together to avoid page breaks within) ──────────
 
-  // ── Detailed Appellation ─────────────────────────────────────────────────
-
-  if (params.showDetailedAppellation && data.appellations.length > 0) {
-    content.push(...sectionHeading('Detailed Appellation Hierarchy'));
-    content.push(buildDetailedAppellationTable(data.appellations, data.appellationMap, data.totalLitres, false, decimals));
+  if (data.appellations.length > 0 && (params.showAppellation || params.showDetailedAppellation)) {
+    const appStack: Content[] = [];
+    if (params.showAppellation) {
+      appStack.push(...sectionHeading('Highest Appellation'));
+      appStack.push(buildAppellationSummary(data.appellations, data.appellationMap, decimals));
+    }
+    if (params.showDetailedAppellation) {
+      appStack.push(...sectionHeading('Detailed Appellation Hierarchy'));
+      appStack.push(buildDetailedAppellationTable(data.appellations, data.appellationMap, data.totalLitres, false, decimals));
+    }
+    content.push({ stack: appStack, unbreakable: true });
   }
 
   // ── Culture & Sweetener ──────────────────────────────────────────────────
@@ -207,18 +212,19 @@ export async function generateDeclarationReport(data: DeclarationReportData): Pr
     header: pageHeader('AVL Wines', 'LIP Declaration Report', generated, data.lotNumber),
     footer: pageFooter('CONFIDENTIAL — AVL Wines LIP Declaration'),
     content,
-    defaultStyle: { font: 'Roboto', fontSize: 9, color: COLORS.dark, lineHeight: 1.3 },
+    defaultStyle: { font: 'Roboto', fontSize: 9, color: COLORS.dark, lineHeight: 1.2 },
   }).download(`LIP_Declaration_${data.lotNumber}.pdf`);
 }
 
 // ─── SWA helper (used by ReportButtons to compute from block components) ─────
 
 export function computeSwaPercent(
-  blockComponents: Array<{ block?: { id?: string }; percentage?: number; tags?: string[] }>,
+  blockComponents: Array<{ block?: { id?: string }; percentage?: number }>,
+  blockTagsMap: Record<string, string[]>,
 ): number {
   let swa = 0;
   blockComponents.forEach((bc) => {
-    const tags = bc.tags ?? [];
+    const tags = blockTagsMap[bc.block?.id ?? ''] ?? [];
     const pct = bc.percentage ?? 0;
     const pctNorm = pct > 1 ? pct : pct * 100;
     if (tags.some((t) => t.toLowerCase() === 'swa')) swa += pctNorm;

@@ -8,6 +8,7 @@ import {
   buildAnalysesTable, buildAdditivesTable, buildVeganStatus,
   buildAppellationSummary, buildDetailedAppellationTable,
   toLitres,
+  type Content,
 } from './pdfHelpers';
 
 export type { CompositionReportData };
@@ -110,28 +111,26 @@ export async function generateCompositionReport(data: CompositionReportData): Pr
     });
   }
 
-  // ── Section 4: Highest Appellation ──────────────────────────────────────
+  // ── Sections 4+5: Appellation (grouped to avoid mid-section page breaks) ──
 
-  content.push(...sectionHeading('4 — Highest Appellation'));
-  if (data.appellations.length > 0) {
-    content.push(buildAppellationSummary(data.appellations, data.appellationMap, decimals));
-  } else {
-    content.push({ text: 'No appellation data.', fontSize: 9, color: COLORS.light, italics: true, margin: [0, 2, 0, 8] });
-  }
-
-  // ── Section 5: Detailed Appellation Hierarchy ─────────────────────────────
-
-  content.push(...sectionHeading('5 — Detailed Appellation Hierarchy'));
-  if (data.appellations.length > 0) {
-    content.push(buildDetailedAppellationTable(data.appellations, data.appellationMap, data.totalLitres, false, decimals));
-
-    // Validation: check if any level doesn't sum to 100%
-    const allPct = data.appellations.reduce((s, a) => s + toPct(a), 0);
-    if (Math.abs(allPct - 100) > 0.1) {
-      content.push(warningBox(`⚠ Appellation percentages total ${fmtPct(allPct, decimals)} — expected ${fmtPct(100, decimals)}. Verify composition data.`, 'amber'));
+  {
+    const appStack: Content[] = [
+      ...sectionHeading('4 — Highest Appellation'),
+      data.appellations.length > 0
+        ? buildAppellationSummary(data.appellations, data.appellationMap, decimals)
+        : { text: 'No appellation data.', fontSize: 9, color: COLORS.light, italics: true, margin: [0, 2, 0, 8] },
+      ...sectionHeading('5 — Detailed Appellation Hierarchy'),
+      data.appellations.length > 0
+        ? buildDetailedAppellationTable(data.appellations, data.appellationMap, data.totalLitres, false, decimals)
+        : { text: 'No appellation data.', fontSize: 9, color: COLORS.light, italics: true, margin: [0, 2, 0, 8] },
+    ];
+    if (data.appellations.length > 0) {
+      const allPct = data.appellations.reduce((s, a) => s + toPct(a), 0);
+      if (Math.abs(allPct - 100) > 0.1) {
+        appStack.push(warningBox(`⚠ Appellation percentages total ${fmtPct(allPct, decimals)} — expected ${fmtPct(100, decimals)}. Verify composition data.`, 'amber'));
+      }
     }
-  } else {
-    content.push({ text: 'No appellation data.', fontSize: 9, color: COLORS.light, italics: true, margin: [0, 2, 0, 8] });
+    content.push({ stack: appStack, unbreakable: true });
   }
 
   // ── Section 6: Culture & Sweetener ───────────────────────────────────────
@@ -174,6 +173,6 @@ export async function generateCompositionReport(data: CompositionReportData): Pr
     header: pageHeader('AVL Wines', 'LIP Composition Details Report', generated, data.lotNumber),
     footer: pageFooter('CONFIDENTIAL — AVL Wines | Composition Details'),
     content,
-    defaultStyle: { font: 'Roboto', fontSize: 9, color: COLORS.dark, lineHeight: 1.3 },
+    defaultStyle: { font: 'Roboto', fontSize: 9, color: COLORS.dark, lineHeight: 1.2 },
   }).download(`LIP_Composition_${data.lotNumber}.pdf`);
 }

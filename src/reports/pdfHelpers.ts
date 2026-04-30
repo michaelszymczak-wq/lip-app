@@ -174,8 +174,8 @@ export type Content = any;
 
 export function sectionHeading(text: string): Content {
   return [
-    { text: text.toUpperCase(), bold: true, fontSize: 10, color: COLORS.accent, margin: [0, 14, 0, 2] },
-    { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 0.5, lineColor: COLORS.border }], margin: [0, 0, 0, 6] },
+    { text: text.toUpperCase(), bold: true, fontSize: 10, color: COLORS.accent, margin: [0, 8, 0, 2] },
+    { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 0.5, lineColor: COLORS.border }], margin: [0, 0, 0, 4] },
   ];
 }
 
@@ -189,7 +189,7 @@ export function kvRow(label: string, value: string, i = 0): Cell[] {
 export function tableHeader(...labels: string[]): Cell[] {
   return labels.map((l) => ({
     text: l, bold: true, fontSize: 8, color: COLORS.medium,
-    fillColor: '#f1f5f9', margin: [3, 4, 3, 4],
+    fillColor: '#f1f5f9', margin: [3, 3, 3, 3],
   }));
 }
 
@@ -197,7 +197,7 @@ export function dataCell(text: string, i: number, opts: Cell = {}): Cell {
   return {
     text, fontSize: 9, color: COLORS.dark,
     fillColor: i % 2 === 0 ? null : COLORS.rowAlt,
-    margin: [3, 3, 3, 3],
+    margin: [3, 2, 3, 2],
     ...opts,
   };
 }
@@ -552,6 +552,31 @@ export function buildLotSummaryTable(
   }
 
   return content;
+}
+
+// Renders varietal and vintage tables side-by-side to halve vertical space.
+export function buildVarietalVintageColumns(
+  varietals: VarietalRow[],
+  vintages: VintageRow[],
+  varietalMap: Record<string, string>,
+  totalLitres?: number,
+  decimals = 4,
+): Content {
+  const colHeading = (text: string): Content => ({
+    text: text.toUpperCase(),
+    bold: true,
+    fontSize: 8,
+    color: COLORS.accent,
+    margin: [0, 0, 0, 3],
+  });
+  return {
+    columns: [
+      { stack: [colHeading('Varietals'), buildVarietalTable(varietals, varietalMap, totalLitres, decimals)] },
+      { stack: [colHeading('Vintages'), buildVintageTable(vintages, totalLitres, decimals)] },
+    ],
+    columnGap: 16,
+    margin: [0, 0, 0, 4],
+  };
 }
 
 export function buildMakeUpTable(

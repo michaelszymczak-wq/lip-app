@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { FileText, Loader2 } from 'lucide-react';
-import type { Lot, ComponentsSummary, Additive, Analysis, BlockComponent, Bond } from '../api/innovint';
+import type { Lot, ComponentsSummary, Additive, Analysis, BlockComponent, Bond, LotMakeup } from '../api/innovint';
 import { useReferenceData } from '../context/ReferenceDataContext';
 import { toL } from '../utils/format';
-import { generateDeclarationReport, computeSwaPercent, extractMakeUp, detectVegan } from '../reports/declaration';
+import { generateDeclarationReport, computeSwaPercent, detectVegan } from '../reports/declaration';
 import { generateCompositionReport } from '../reports/composition';
 import { generateDispatchReport } from '../reports/dispatch';
 import type { DeclarationParams } from '../reports/types';
@@ -15,9 +15,11 @@ interface ReportButtonsProps {
   lot: Lot | null;
   bond: Bond | null;
   summary: ComponentsSummary | null;
+  makeup: LotMakeup | null;
   additives: Additive[] | null;
   analyses: Analysis[] | null;
   blockComponents: BlockComponent[] | null;
+  blockTags: Record<string, string[]>;
   onToast: (message: string) => void;
 }
 
@@ -28,9 +30,11 @@ export function ReportButtons({
   lot,
   bond,
   summary,
+  makeup,
   additives,
   analyses,
   blockComponents,
+  blockTags,
   onToast,
 }: ReportButtonsProps) {
   const { varietals: varietalMap, appellations: appellationMap, additiveProducts, dryGoodIndicators } = useReferenceData();
@@ -45,9 +49,22 @@ export function ReportButtons({
     const totalLitres = toL(lot?.volume);
     const vesselName = bond?.name ?? bond?.code ?? lot?.bondId ?? '—';
     const vesselCapacity = bond?.capacity != null ? Number(bond.capacity) : undefined;
-    const makeup = extractMakeUp((summary ?? {}) as Record<string, unknown>);
-    const swaPercent = blockComponents ? computeSwaPercent(blockComponents) : undefined;
+    const swaPercent = blockComponents ? computeSwaPercent(blockComponents, blockTags) : undefined;
     const isVegan = additives ? detectVegan(additives, dryGoodIndicators) : null;
+
+    // Derive juice/wine and culture/sweetener from the makeup API data
+    const makeupKeys = ['juiceWine', 'juiceConcentrate', 'yeastCulture', 'water', 'additive'] as const;
+    const totalMakeupVol = makeup
+      ? makeupKeys.reduce((s, k) => s + (makeup[k]?.volume?.value ?? 0), 0)
+      : 0;
+    const jwLitres = makeup?.juiceWine?.volume?.value ?? 0;
+    const cultureLitres = (makeup?.yeastCulture?.volume?.value ?? 0) + (makeup?.juiceConcentrate?.volume?.value ?? 0);
+    const makeupPercentages = totalMakeupVol > 0 ? {
+      juiceWinePercent: jwLitres > 0 ? (jwLitres / totalMakeupVol) * 100 : undefined,
+      juiceWineLitres: jwLitres > 0 ? jwLitres : undefined,
+      culturePercent: cultureLitres > 0 ? (cultureLitres / totalMakeupVol) * 100 : undefined,
+      cultureLitres: cultureLitres > 0 ? cultureLitres : undefined,
+    } : {};
 
     return {
       lotNumber: lot?.code ?? '—',
@@ -55,7 +72,7 @@ export function ReportButtons({
       vesselName,
       vesselCapacity,
       totalLitres,
-      ...makeup,
+      ...makeupPercentages,
       varietals: summary?.varietals ?? [],
       vintages: summary?.vintages ?? [],
       appellations: summary?.appellations ?? [],

@@ -10,6 +10,7 @@ import {
   fetchAnalyses,
   fetchLot,
   fetchBlockComponents,
+  fetchBlock,
   fetchBond,
   fetchLotMakeup,
   InnoVintError,
@@ -45,6 +46,7 @@ export function Dashboard() {
   const [analyses, setAnalyses] = useState<LoadState<Analysis[]>>({ status: 'idle' });
   const [blockComponents, setBlockComponents] = useState<LoadState<BlockComponent[]>>({ status: 'idle' });
   const [makeup, setMakeup] = useState<LoadState<LotMakeup>>({ status: 'idle' });
+  const [blockTags, setBlockTags] = useState<Record<string, string[]>>({});
   const [compositionView, setCompositionView] = useState<'juicewine' | 'makeup'>('juicewine');
   const [toast, setToast] = useState<string | null>(null);
 
@@ -106,9 +108,22 @@ export function Dashboard() {
   const loadBlockComponents = useCallback(async (id: string) => {
     if (!token) return;
     setBlockComponents({ status: 'loading' });
+    setBlockTags({});
     try {
       const data = await fetchBlockComponents(token, id);
       setBlockComponents({ status: 'success', data });
+      const uniqueIds = [...new Set(data.map((r) => r.block?.id).filter((bid): bid is string => !!bid))];
+      Promise.all(
+        uniqueIds.map((blockId) =>
+          fetchBlock(token, blockId)
+            .then((b) => ({ id: blockId, tags: (b.tags ?? []) as string[] }))
+            .catch(() => ({ id: blockId, tags: [] as string[] }))
+        )
+      ).then((results) => {
+        const map: Record<string, string[]> = {};
+        results.forEach(({ id: blockId, tags }) => { map[blockId] = tags; });
+        setBlockTags(map);
+      });
     } catch (err) {
       const { message, endpoint } = errMsg(err, 'Failed to load block components');
       setBlockComponents({ status: 'error', message, endpoint });
@@ -180,9 +195,11 @@ export function Dashboard() {
           lot={lotDetail.status === 'success' ? lotDetail.data : null}
           bond={bond}
           summary={summary.status === 'success' ? summary.data : null}
+          makeup={makeup.status === 'success' ? makeup.data : null}
           additives={additives.status === 'success' ? additives.data : null}
           analyses={analyses.status === 'success' ? analyses.data : null}
           blockComponents={blockComponents.status === 'success' ? blockComponents.data : null}
+          blockTags={blockTags}
           onToast={(msg) => setToast(msg)}
         />
 
@@ -269,7 +286,7 @@ export function Dashboard() {
                 {blockComponents.status === 'error' && (
                   <ErrorState message={blockComponents.message} endpoint={blockComponents.endpoint} onRetry={() => loadBlockComponents(lotId)} />
                 )}
-                {blockComponents.status === 'success' && <BlockComponents data={blockComponents.data} />}
+                {blockComponents.status === 'success' && <BlockComponents data={blockComponents.data} blockTags={blockTags} />}
               </SectionCard>
             </div>
 

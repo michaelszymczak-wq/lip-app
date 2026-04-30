@@ -76,6 +76,7 @@ export function AdditivesAllergens({ data }: Props) {
         <thead>
           <tr className="border-b border-slate-200 bg-slate-50">
             <th className="text-left py-2 px-3 font-medium text-slate-500 text-xs">Additive</th>
+            <th className="text-left py-2 px-3 font-medium text-slate-500 text-xs">Batch</th>
             <th className="text-right py-2 px-3 font-medium text-slate-500 text-xs">Amount</th>
             <th className="text-left py-2 px-3 font-medium text-slate-500 text-xs">Unit</th>
             <th className="text-center py-2 px-3 font-medium text-slate-500 text-xs">Allergen</th>
@@ -91,6 +92,9 @@ export function AdditivesAllergens({ data }: Props) {
               <tr key={i} className="border-b border-slate-50 last:border-0 hover:bg-slate-50">
                 <td className="py-2 px-3 text-slate-800 font-medium">
                   {resolveName(additive, additiveProducts)}
+                </td>
+                <td className="py-2 px-3 text-slate-500 text-xs">
+                  {additive.batchNumber ?? '—'}
                 </td>
                 <td className="py-2 px-3 text-right tabular-nums text-slate-800">{value}</td>
                 <td className="py-2 px-3 text-slate-600">{unit}</td>
